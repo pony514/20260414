@@ -99,7 +99,7 @@ class Seed {
     // 繪製核心種子
     stroke(this.isHovered ? 255 : 80, 120, 80);
     strokeWeight(2);
-    fill(this.isHovered ? '#FFD700' : '#6a0bc2'); // 懸停變金色
+    fill(this.isHovered ? '#FFD700' : '#8B4513'); // 懸停變金色
     ellipse(0, 0, this.size);
     
     // 週次文字
