@@ -1,5 +1,5 @@
 let seeds = [];
-let totalWeeks = 6; // 假設有 8 週的作品
+let totalWeeks = 7; // 假設有 8 週的作品
 let iframe;
 
 function setup() {
@@ -21,7 +21,7 @@ function setup() {
 }
 
 function draw() {
-  background(245, 245, 235); // 柔和的紙張背景色
+  background("#2f3e46"); // 柔和的紙張背景色
   
   // 1. 技術點：Vertex & For 繪製動態藤蔓時間軸
   drawTimeVine();
@@ -35,7 +35,7 @@ function draw() {
 
 function drawTimeVine() {
   noFill();
-  stroke(100, 140, 100, 150); // 藤蔓顏色
+  stroke("#2a9d8f"); // 藤蔓顏色
   strokeWeight(4);
   
   beginShape();
@@ -99,7 +99,7 @@ class Seed {
     // 繪製核心種子
     stroke(this.isHovered ? 255 : 80, 120, 80);
     strokeWeight(2);
-    fill(this.isHovered ? '#FFD700' : '#8B4513'); // 懸停變金色
+    fill(this.isHovered ? '#FFD700' : '#6a0bc2'); // 懸停變金色
     ellipse(0, 0, this.size);
     
     // 週次文字

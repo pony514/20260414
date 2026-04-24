@@ -1,141 +1,131 @@
-let topPoints = [];
-let bottomPoints = [];
-let gameState = "START"; // START, PLAYING, FAIL, SUCCESS
+let grasses = [];
+let bubbles = [];
+let grassColors = ['#004b23', '#006400', '#007200', '#008000', '#38b000', '#70e000', '#9ef01a', '#ccff33'];
+let popSound;
+let soundEnabled = false;
+
+function preload() {
+  popSound = loadSound('pop.mp3');
+}
 
 function setup() {
+  let iframe = createElement('iframe');
+  iframe.attribute('src', 'https://www.et.tku.edu.tw');
+  iframe.style('position', 'absolute');
+  iframe.style('top', '0');
+  iframe.style('left', '0');
+  iframe.style('width', '100%');
+  iframe.style('height', '100%');
+  iframe.style('border', 'none');
+  iframe.style('z-index', '-1');
   createCanvas(windowWidth, windowHeight);
-  generatePath();
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  generatePath();
-}
-
-function generatePath() {
-  topPoints = [];
-  bottomPoints = [];
-  let xStart = width * 0.02; // 起點佔寬度 15%
-  let xEnd = width * 1;   // 終點佔寬度 85%
-  let step = (xEnd - xStart) / 19; // 修正為 20 個點的間距
-  
-  // 產生 20 個點連成一條線
-  for (let i = 0; i < 20; i++) {
-    let x = xStart + i * step;
-    let y = random(height * 0.5, height * 0.65);
-    topPoints.push({ x: x, y: y });
-    // 下方點距離 15 到 45 間
-    let gap = random(80, 100);
-    bottomPoints.push({ x: x, y: y + gap });
+  // 產生 80 條水草
+  for (let i = 0; i < 80; i++) {
+    let x = map(i, 0, 79, -50, width + 50); // 位置
+    let h = random(height * 0.2, height * 0.3); // 高度
+    let c = color(grassColors[i % grassColors.length]); // 顏色
+    c.setAlpha(150);
+    let w = random(40, 50); // 粗細
+    let s = random(0.005, 0.02); // 搖晃頻率
+    grasses.push(new Grass(x, h, c, w, s));
   }
+}
+
+function mousePressed() {
+  userStartAudio();
+  soundEnabled = !soundEnabled;
 }
 
 function draw() {
-  background("#7161ef");
-  
-  if (gameState === "START") {
-    drawStartScreen();
-  } else if (gameState === "PLAYING") {
-    drawGame();
-    checkCollision();
-    checkWin();
-  } else if (gameState === "FAIL") {
-    showEndScreen("FAILED!", color(255, 0, 0));
-  } else if (gameState === "SUCCESS") {
-    showEndScreen("SUCCESS!", color(0, 150, 0));
+  clear();
+
+  // 產生並管理氣泡
+  if (frameCount % 20 === 0) { // 每 20 幀產生一個氣泡
+    bubbles.push(new Bubble());
   }
-}
-
-function drawStartScreen() {
-  rectMode(CENTER);
-  textAlign(CENTER, CENTER);
-
-  // 繪製遊戲標題
-  fill(255); // 白色文字
-  textSize(min(width * 0.07, 60)); 
-  text("電流急急棒遊戲", width / 2, height * 0.3);
-
-  let startX = width * 0.08;
-  fill("#e0d9ff");
-  rect(startX, height / 2, 80, 50);
-  fill(0);
-  noStroke();
-  textSize(16);
-  text("START", startX, height / 2);
-  if (mouseIsPressed && dist(mouseX, mouseY, startX, height / 2) < 40) {
-    gameState = "PLAYING";
-  }
-}
-
-function drawGame() {
-  stroke("#17bebb");
-  strokeWeight(3);
-  noFill();
-
-  // 使用 curveVertex 繪製上方與下方曲線
-  beginShape();
-  if (topPoints.length > 0) {
-    curveVertex(topPoints[0].x, topPoints[0].y); // 起始控制點
-    for (let p of topPoints) curveVertex(p.x, p.y);
-    curveVertex(topPoints[topPoints.length - 1].x, topPoints[topPoints.length - 1].y); // 結束控制點
-  }
-  endShape();
-
-  beginShape();
-  if (bottomPoints.length > 0) {
-    curveVertex(bottomPoints[0].x, bottomPoints[0].y);
-    for (let p of bottomPoints) curveVertex(p.x, p.y);
-    curveVertex(bottomPoints[bottomPoints.length - 1].x, bottomPoints[bottomPoints.length - 1].y);
-  }
-  endShape();
-
-  // 繪製滑鼠位置的小紅點
-  fill(255, 0, 0);
-  noStroke();
-  ellipse(mouseX, mouseY, 10, 10);
-
-  // 繪製結束鈕
-  noStroke();
-  fill("#b79ced");
-  let endX = width - 25;
-  rect(endX, height / 2, 50, height * 0.4);
-  fill(0);
-  textSize(16);
-  text("END", endX, height / 2);
-}
-
-function checkCollision() {
-  for (let i = 0; i < topPoints.length - 1; i++) {
-    if (isNear(topPoints[i], topPoints[i+1]) || isNear(bottomPoints[i], bottomPoints[i+1])) {
-      gameState = "FAIL";
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    bubbles[i].update();
+    bubbles[i].display();
+    if (bubbles[i].isFinished()) {
+      bubbles.splice(i, 1);
     }
   }
+
+  for (let g of grasses) {
+    g.display();
+  }
 }
 
-function isNear(p1, p2) {
-  // 使用投影法計算點到線段的最短距離，以精準偵測紅點碰撞
-  let lineDist = dist(p1.x, p1.y, p2.x, p2.y);
-  if (lineDist === 0) return dist(mouseX, mouseY, p1.x, p1.y) < 8;
-  let t = ((mouseX - p1.x) * (p2.x - p1.x) + (mouseY - p1.y) * (p2.y - p1.y)) / (lineDist * lineDist);
-  t = constrain(t, 0, 1);
-  let d = dist(mouseX, mouseY, p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y));
-  return d < 8; // 紅點半徑 5 + 線條寬度緩衝
+class Grass {
+  constructor(x, h, c, w, s) {
+    this.x = x;
+    this.h = h;
+    this.color = c;
+    this.weight = w;
+    this.speed = s;
+    // 每個水草有獨立的 noise 偏移
+    this.noiseOffset = random(1000);
+  }
+
+  display() {
+    stroke(this.color);
+    strokeWeight(this.weight);
+    noFill();
+
+    beginShape();
+    curveVertex(this.x, height); // 起始控制點
+    curveVertex(this.x, height); // 起始點
+    for (let y = height; y >= height - this.h; y -= 10) {
+      let n = noise(frameCount * this.speed + this.noiseOffset, y * 0.01);
+      let xOffset = map(n, 0, 1, -100, 100);
+      let sway = xOffset * ((height - y) / this.h);
+      curveVertex(this.x + sway, y);
+    }
+    endShape();
+  }
 }
 
-function checkWin() {
-  if (mouseX > width - 50) gameState = "SUCCESS";
-}
+class Bubble {
+  constructor() {
+    this.x = random(width);
+    this.y = height + 10; // 從底部下方生成
+    this.size = random(30, 50);
+    this.speed = random(1, 3);
+    // 設定泡泡破裂的高度 (在視窗高度的 10% 到 80% 之間隨機破裂)
+    this.popY = random(height * 0.1, height * 0.8);
+    this.popping = false;
+    this.popTimer = 0;
+  }
 
-function showEndScreen(msg, clr) {
-  textAlign(CENTER, CENTER);
-  textSize(width * 0.08); // 文字大小隨螢幕寬度縮放
-  fill(clr);
-  text(msg, width / 2, height / 2);
-  textSize(width * 0.02);
-  fill(0);
-  text("Click anywhere to restart", width / 2, height / 2 + height * 0.1);
-  if (mouseIsPressed && frameCount % 60 > 30) {
-    generatePath();
-    gameState = "START";
+  update() {
+    if (!this.popping) {
+      this.y -= this.speed;
+      // 到達指定高度或太高時破裂
+      if (this.y < this.popY) {
+        this.popping = true;
+        if (soundEnabled) {
+          popSound.play();
+        }
+      }
+    } else {
+      this.popTimer++;
+    }
+  }
+
+  display() {
+    if (!this.popping) {
+      noStroke();
+      fill(255, 127); // 白色，透明度 0.5 (127/255)
+      circle(this.x, this.y, this.size);
+    } else {
+      // 破裂效果：空心圓圈變大並淡出
+      noFill();
+      stroke(255, map(this.popTimer, 0, 10, 127, 0));
+      circle(this.x, this.y, this.size + this.popTimer * 2);
+    }
+  }
+
+  isFinished() {
+    return (this.popping && this.popTimer > 10) || (this.y < -50);
   }
 }
